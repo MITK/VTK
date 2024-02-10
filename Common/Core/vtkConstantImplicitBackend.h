@@ -32,7 +32,7 @@
  */
 VTK_ABI_NAMESPACE_BEGIN
 template <typename ValueType>
-struct VTKCOMMONCORE_EXPORT vtkConstantImplicitBackend final
+struct vtkConstantImplicitBackend final
 {
   /**
    * A non-trivially contructible constructor
