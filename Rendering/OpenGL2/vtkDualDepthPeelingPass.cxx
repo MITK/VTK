@@ -1207,6 +1207,15 @@ bool vtkDualDepthPeelingPass::PeelingDone()
 {
   const auto writtenPix = this->TranslucentWrittenPixels + this->VolumetricWrittenPixels;
 
+  // The occlusion query of the first peel is not meaningful. CopyOpaqueDepthBuffer() pins
+  // the back depth of every pixel covered by opaque geometry to the opaque depth, where no
+  // translucent fragment can lie, so those pixels write no back fragment in the first peel.
+  // Later peels rebuild the depth range from the carried fragments alone.
+  if (this->CurrentPeel < 2)
+  {
+    return this->CurrentPeel >= this->MaximumNumberOfPeels;
+  }
+
   return this->CurrentPeel >= this->MaximumNumberOfPeels || writtenPix <= this->OcclusionThreshold;
 }
 
