@@ -13,6 +13,7 @@
 #include "vtkDataSetAttributes.h"
 #include "vtkDoubleArray.h"
 #include "vtkDummyController.h"
+#include "vtkErrorCode.h"
 #include "vtkFieldData.h"
 #include "vtkHDF5ScopedHandle.h"
 #include "vtkHDFUtilities.h"
@@ -204,6 +205,11 @@ int vtkHDFWriter::RequestData(vtkInformation* request,
     return 1;
   }
 
+  if (this->CurrentTimeIndex == 0)
+  {
+    this->SetErrorCode(vtkErrorCode::NoError);
+  }
+
   bool ret = this->WriteDataAndReturn();
 
   if (this->IsTemporal)
@@ -212,7 +218,10 @@ int vtkHDFWriter::RequestData(vtkInformation* request,
     request->Set(vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1);
 
     this->CurrentTimeIndex++;
-    if (this->CurrentTimeIndex >= this->NumberOfTimeSteps)
+
+    // A failed time step stops the loop as well: the executive keeps
+    // re-executing while CONTINUE_EXECUTING is set, whatever this returns.
+    if (!ret || this->CurrentTimeIndex >= this->NumberOfTimeSteps)
     {
       // Tell the pipeline to stop looping.
       request->Set(vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 0);
@@ -223,6 +232,13 @@ int vtkHDFWriter::RequestData(vtkInformation* request,
   else
   {
     this->Impl->CloseFile();
+  }
+
+  // The executive does not pass the result of the last time step on to
+  // Write(), which relies on the error code instead.
+  if (!ret && this->GetErrorCode() == vtkErrorCode::NoError)
+  {
+    this->SetErrorCode(vtkErrorCode::UnknownError);
   }
 
   return ret ? 1 : 0;
